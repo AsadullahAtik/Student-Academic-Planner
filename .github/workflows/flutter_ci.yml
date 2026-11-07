@@ -1,0 +1,45 @@
+name: Flutter Build & Test CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Locate Target Directory
+        id: find_dir
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            echo "target_dir=." >> $GITHUB_OUTPUT
+          elif [ -f "academic_planner/pubspec.yaml" ]; then
+            echo "target_dir=academic_planner" >> $GITHUB_OUTPUT
+          else
+            echo "pubspec.yaml not found" && exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: ${{ steps.find_dir.outputs.target_dir }}
+        run: flutter pub get
+
+      - name: Run unit & widget tests
+        working-directory: ${{ steps.find_dir.outputs.target_dir }}
+        run: flutter test --no-pub
+
+      - name: Build Web
+        working-directory: ${{ steps.find_dir.outputs.target_dir }}
+        run: flutter build web --no-pub
